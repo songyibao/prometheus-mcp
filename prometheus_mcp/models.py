@@ -29,6 +29,7 @@ class AnalyzeRequest(BaseModel):
     start: Optional[int] = None
     end: Optional[int] = None
     step: Optional[str] = None
+    interval: Optional[str] = None  # 新增：用于替换模板中的 {{interval}}
 
 
 class AnalyzeResponse(BaseModel):
@@ -38,5 +39,6 @@ class AnalyzeResponse(BaseModel):
     start: Optional[int] = None
     end: Optional[int] = None
     step: Optional[str] = None
+    interval: Optional[str] = None  # 新增：返回使用的 interval
     # 每项 = { description: str, resultType: str, result: list }
     resultData: List[Dict[str, Any]] = Field(default_factory=list)

@@ -5,263 +5,143 @@
     "password": "admin",
     "queryTimeout": "30s",
     "defaultStep": "1m",
-    "minStep": "15s"
+    "maxPoints": 30,
+    "defaultInterval": "5m"
   },
   "appInstances": [
-    {
-      "name": "已经废弃",
-      "description": "通过prometheus mysql exporter的查询语句获取mysql性能指标",
-      "queryTemplates": [
-        {
-          "metric": "connections",
-          "description": "当前连接数",
-          "template": "mysql_global_status_connections{{labels}}"
-        },
-        {
-          "metric": "queries_rate",
-          "description": "每秒查询数(QPS)",
-          "template": "rate(mysql_global_status_questions{{labels}}[1m])"
-        },
-        {
-          "metric": "active_threads",
-          "description": "活动线程数",
-          "template": "mysql_global_status_threads_connected{{labels}}"
-        },
-        {
-          "metric": "slow_queries",
-          "description": "慢查询总数",
-          "template": "mysql_global_status_slow_queries{{labels}}"
-        },
-        {
-          "metric": "innodb_buffer_pool_hit_ratio",
-          "description": "InnoDB缓冲池命中率(%)",
-          "template": "(1 - (mysql_global_status_innodb_buffer_pool_reads{{labels}} / mysql_global_status_innodb_buffer_pool_read_requests{{labels}})) * 100"
-        },
-        {
-          "metric": "innodb_row_lock_time",
-          "description": "InnoDB行锁等待时间",
-          "template": "mysql_global_status_innodb_row_lock_time{{labels}}"
-        },
-        {
-          "metric": "innodb_row_lock_waits",
-          "description": "InnoDB行锁等待次数",
-          "template": "mysql_global_status_innodb_row_lock_waits{{labels}}"
-        },
-        {
-          "metric": "table_locks_waited",
-          "description": "表级锁等待次数",
-          "template": "mysql_global_status_table_locks_waited{{labels}}"
-        },
-        {
-          "metric": "bytes_sent",
-          "description": "每秒发送字节数",
-          "template": "rate(mysql_global_status_bytes_sent{{labels}}[1m])"
-        },
-        {
-          "metric": "bytes_received",
-          "description": "每秒接收字节数",
-          "template": "rate(mysql_global_status_bytes_received{{labels}}[1m])"
-        },
-        {
-          "metric": "aborted_connects",
-          "description": "失败连接次数",
-          "template": "mysql_global_status_aborted_connects{{labels}}"
-        },
-        {
-          "metric": "created_tmp_disk_tables",
-          "description": "磁盘临时表创建数",
-          "template": "mysql_global_status_created_tmp_disk_tables{{labels}}"
-        },
-        {
-          "metric": "created_tmp_tables",
-          "description": "内存临时表创建数",
-          "template": "mysql_global_status_created_tmp_tables{{labels}}"
-        },
-        {
-          "metric": "select_full_join",
-          "description": "全表JOIN次数",
-          "template": "mysql_global_status_select_full_join{{labels}}"
-        },
-        {
-          "metric": "select_full_range_join",
-          "description": "范围扫描JOIN次数",
-          "template": "mysql_global_status_select_full_range_join{{labels}}"
-        },
-        {
-          "metric": "sort_merge_passes",
-          "description": "排序归并次数",
-          "template": "mysql_global_status_sort_merge_passes{{labels}}"
-        },
-        {
-          "metric": "sort_range",
-          "description": "范围排序次数",
-          "template": "mysql_global_status_sort_range{{labels}}"
-        },
-        {
-          "metric": "sort_rows",
-          "description": "排序行数",
-          "template": "mysql_global_status_sort_rows{{labels}}"
-        },
-        {
-          "metric": "sort_scan",
-          "description": "全表扫描排序次数",
-          "template": "mysql_global_status_sort_scan{{labels}}"
-        }
-      ]
-    },
     {
       "name": "mysql_analyze",
       "description": "通过prometheus mysql exporter的查询语句获取mysql性能指标",
       "queryTemplates": [
         {
-          "metric": "connections",
-          "description": "当前连接数",
-          "template": "mysql_global_status_threads_connected{{labels}}"
+          "metric": "uptime_seconds",
+          "description": "MySQL 实例累计运行时长(秒)",
+          "template": "mysql_global_status_uptime{{labels}}"
         },
         {
-          "metric": "max_connections",
-          "description": "最大连接数",
-          "template": "mysql_global_variables_max_connections{{labels}}"
+          "metric": "qps",
+          "description": "每秒查询数(QPS),时间窗口：{{interval}}",
+          "template": "rate(mysql_global_status_queries{{labels}}[{{interval}}])"
         },
         {
-          "metric": "connection_usage_ratio",
-          "description": "连接使用率(%)",
-          "template": "(mysql_global_status_threads_connected{{labels}} / mysql_global_variables_max_connections{{labels}}) * 100"
+          "metric": "innodb_buffer_pool_size_bytes",
+          "description": "InnoDB 缓冲池大小(字节)",
+          "template": "mysql_global_variables_innodb_buffer_pool_size{{labels}}"
         },
         {
-          "metric": "queries_rate",
-          "description": "每秒查询数(QPS)",
-          "template": "rate(mysql_global_status_questions{{labels}}[1m])"
+          "metric": "max_threads_connected",
+          "description": "{{interval}} 内最大并发连接数",
+          "template": "sum(max_over_time(mysql_global_status_threads_connected{{labels}}[{{interval}}]))"
         },
         {
-          "metric": "slow_queries_rate",
-          "description": "每秒慢查询数",
-          "template": "rate(mysql_global_status_slow_queries{{labels}}[1m])"
+          "metric": "max_active_threads",
+          "description": "{{interval}} 内最大活动线程数",
+          "template": "sum(max_over_time(mysql_global_status_threads_connected{{labels}}[{{interval}}]))"
         },
         {
-          "metric": "active_threads",
-          "description": "活动线程数",
-          "template": "mysql_global_status_threads_connected{{labels}}"
+          "metric": "questions_rate",
+          "description": "{{interval}} 内 Questions 命令请求速率",
+          "template": "rate(mysql_global_status_questions{{labels}}[{{interval}}])"
         },
         {
-          "metric": "running_threads",
-          "description": "正在运行的线程数",
-          "template": "mysql_global_status_threads_running{{labels}}"
+          "metric": "thread_cache_size",
+          "description": "线程缓存大小(thread_cache_size)",
+          "template": "sum(mysql_global_variables_thread_cache_size{{labels}})"
         },
         {
-          "metric": "slow_queries",
-          "description": "慢查询总数",
-          "template": "mysql_global_status_slow_queries{{labels}}"
-        },
-        {
-          "metric": "innodb_buffer_pool_hit_ratio",
-          "description": "InnoDB缓冲池命中率(%)",
-          "template": "(1 - (rate(mysql_global_status_innodb_buffer_pool_reads{{labels}}[5m]) / rate(mysql_global_status_innodb_buffer_pool_read_requests{{labels}}[5m]))) * 100"
-        },
-        {
-          "metric": "innodb_buffer_pool_usage",
-          "description": "InnoDB缓冲池使用率(%)",
-          "template": "(mysql_global_status_innodb_buffer_pool_pages_data{{labels}} / mysql_global_status_innodb_buffer_pool_pages_total{{labels}}) * 100"
-        },
-        {
-          "metric": "innodb_row_lock_time_avg",
-          "description": "InnoDB平均行锁等待时间(ms)",
-          "template": "rate(mysql_global_status_innodb_row_lock_time{{labels}}[1m]) / rate(mysql_global_status_innodb_row_lock_waits{{labels}}[1m])"
-        },
-        {
-          "metric": "innodb_row_lock_waits_rate",
-          "description": "每秒InnoDB行锁等待次数",
-          "template": "rate(mysql_global_status_innodb_row_lock_waits{{labels}}[1m])"
-        },
-        {
-          "metric": "table_locks_waited_rate",
-          "description": "每秒表级锁等待次数",
-          "template": "rate(mysql_global_status_table_locks_waited{{labels}}[1m])"
-        },
-        {
-          "metric": "bytes_sent_rate",
-          "description": "每秒发送字节数",
-          "template": "rate(mysql_global_status_bytes_sent{{labels}}[1m])"
-        },
-        {
-          "metric": "bytes_received_rate",
-          "description": "每秒接收字节数",
-          "template": "rate(mysql_global_status_bytes_received{{labels}}[1m])"
-        },
-        {
-          "metric": "aborted_connects_rate",
-          "description": "每秒失败连接次数",
-          "template": "rate(mysql_global_status_aborted_connects{{labels}}[1m])"
-        },
-        {
-          "metric": "aborted_clients_rate",
-          "description": "每秒客户端异常断开次数",
-          "template": "rate(mysql_global_status_aborted_clients{{labels}}[1m])"
-        },
-        {
-          "metric": "tmp_disk_tables_rate",
-          "description": "每秒磁盘临时表创建数",
-          "template": "rate(mysql_global_status_created_tmp_disk_tables{{labels}}[1m])"
-        },
-        {
-          "metric": "tmp_tables_rate",
-          "description": "每秒内存临时表创建数",
-          "template": "rate(mysql_global_status_created_tmp_tables{{labels}}[1m])"
-        },
-        {
-          "metric": "tmp_disk_ratio",
-          "description": "磁盘临时表比例(%)",
-          "template": "(rate(mysql_global_status_created_tmp_disk_tables{{labels}}[5m]) / rate(mysql_global_status_created_tmp_tables{{labels}}[5m])) * 100"
+          "metric": "created_tmp_tables_rate",
+          "description": "{{interval}}内创建临时表(内存+磁盘)速率",
+          "template": "sum(rate(mysql_global_status_created_tmp_tables{{labels}}[{{interval}}]))"
         },
         {
           "metric": "select_full_join_rate",
-          "description": "每秒全表JOIN次数",
-          "template": "rate(mysql_global_status_select_full_join{{labels}}[1m])"
+          "description": "需要全表扫描的 JOIN 每秒次数 (可能的索引缺失)",
+          "template": "sum(rate(mysql_global_status_select_full_join{{labels}}[{{interval}}]))"
         },
         {
-          "metric": "select_scan_rate",
-          "description": "每秒全表扫描次数",
-          "template": "rate(mysql_global_status_select_scan{{labels}}[1m])"
+          "metric": "sort_rows_rate",
+          "description": "{{interval}} 内排序处理的行数每秒 (Sort Rows)",
+          "template": "sum(rate(mysql_global_status_sort_rows{{labels}}[{{interval}}]))"
         },
         {
-          "metric": "sort_merge_passes_rate",
-          "description": "每秒排序归并次数",
-          "template": "rate(mysql_global_status_sort_merge_passes{{labels}}[1m])"
+          "metric": "slow_queries_rate",
+          "description": "{{interval}} 内慢查询发生速率",
+          "template": "sum(rate(mysql_global_status_slow_queries{{labels}}[{{interval}}]))"
         },
         {
-          "metric": "key_read_requests_rate",
-          "description": "每秒索引读取请求数",
-          "template": "rate(mysql_global_status_key_read_requests{{labels}}[1m])"
+          "metric": "aborted_connects_rate",
+          "description": "失败/中断连接速率",
+          "template": "sum(rate(mysql_global_status_aborted_connects{{labels}}[{{interval}}]))"
         },
         {
-          "metric": "key_reads_rate",
-          "description": "每秒从磁盘读取索引数",
-          "template": "rate(mysql_global_status_key_reads{{labels}}[1m])"
+          "metric": "table_locks_immediate_rate",
+          "description": "立即获取表级锁的速率 (成功无需等待)",
+          "template": "sum(rate(mysql_global_status_table_locks_immediate{{labels}}[{{interval}}]))"
         },
         {
-          "metric": "key_cache_hit_ratio",
-          "description": "索引缓存命中率(%)",
-          "template": "(1 - (rate(mysql_global_status_key_reads{{labels}}[5m]) / rate(mysql_global_status_key_read_requests{{labels}}[5m]))) * 100"
+          "metric": "bytes_received_rate",
+          "description": "网络接收字节速率",
+          "template": "sum(rate(mysql_global_status_bytes_received{{labels}}[{{interval}}]))"
         },
         {
-          "metric": "query_cache_hit_ratio",
-          "description": "查询缓存命中率(%)",
-          "template": "(rate(mysql_global_status_qcache_hits{{labels}}[5m]) / (rate(mysql_global_status_qcache_hits{{labels}}[5m]) + rate(mysql_global_status_com_select{{labels}}[5m]))) * 100"
+          "metric": "top_command_counters_rate",
+          "description": "时间窗口内最活跃(速率>0)前5类命令及其速率",
+          "template": "topk(5, rate(mysql_global_status_commands_total{{labels}}[{{interval}}])>0)"
+        },
+        {
+          "metric": "handlers_total_rate",
+          "description": "各类 Handler 操作总速率 (读取/写入/扫描等)",
+          "template": "rate(mysql_global_status_handlers_total{{labels}}[{{interval}}]) or irate(mysql_global_status_handlers_total{{labels}}[5m])"
+        },
+        {
+          "metric": "transaction_handlers_rate",
+          "description": "事务相关 Handler 操作速率",
+          "template": "rate(mysql_global_status_handlers_total{{labels}}[{{interval}}]) or irate(mysql_global_status_handlers_total{{labels}}[5m])"
+        },
+        {
+          "metric": "threads_state",
+          "description": "当前线程状态分布 (INFORMATION_SCHEMA.THREADS)",
+          "template": "mysql_info_schema_threads{{labels}}"
+        },
+        {
+          "metric": "top_threads_state_1h",
+          "description": "过去1小时线程状态平均 Top5",
+          "template": "topk(5, avg_over_time(mysql_info_schema_threads{{labels}}[1h]))"
+        },
+        {
+          "metric": "qcache_free_memory_bytes",
+          "description": "查询缓存剩余内存 (若启用查询缓存)",
+          "template": "mysql_global_status_qcache_free_memory{{labels}}"
+        },
+        {
+          "metric": "qcache_hits_rate",
+          "description": "查询缓存命中速率",
+          "template": "rate(mysql_global_status_qcache_hits{{labels}}[{{interval}}]) or irate(mysql_global_status_qcache_hits{{labels}}[5m])"
+        },
+        {
+          "metric": "opened_files_rate",
+          "description": "文件打开次数速率",
+          "template": "rate(mysql_global_status_opened_files{{labels}}[{{interval}}]) or irate(mysql_global_status_opened_files{{labels}}[5m])"
         },
         {
           "metric": "open_files",
-          "description": "当前打开文件数",
+          "description": "当前已打开文件数",
           "template": "mysql_global_status_open_files{{labels}}"
         },
         {
+          "metric": "opened_tables_rate",
+          "description": "表被打开次数速率",
+          "template": "rate(mysql_global_status_opened_tables{{labels}}[{{interval}}]) or irate(mysql_global_status_opened_tables{{labels}}[5m])"
+        },
+        {
           "metric": "open_tables",
-          "description": "当前打开表数",
+          "description": "当前已打开表数量",
           "template": "mysql_global_status_open_tables{{labels}}"
         },
         {
-          "metric": "table_open_cache_hit_ratio",
-          "description": "表缓存命中率(%)",
-          "template": "(rate(mysql_global_status_table_open_cache_hits{{labels}}[5m]) / (rate(mysql_global_status_table_open_cache_hits{{labels}}[5m]) + rate(mysql_global_status_table_open_cache_misses{{labels}}[5m]))) * 100"
+          "metric": "open_table_definitions",
+          "description": "当前已缓存的表定义数量",
+          "template": "mysql_global_status_open_table_definitions{{labels}}"
         }
       ]
     },
@@ -358,6 +238,27 @@
           "metric": "repl_backlog_size",
           "description": "复制积压缓冲区大小",
           "template": "redis_repl_backlog_size{{labels}}"
+        }
+      ]
+    },
+    {
+      "name": "node_analyze",
+      "description": "通过 node_exporter 获取主机基础资源(仅保留已验证指标)",
+      "queryTemplates": [
+        {
+          "metric": "cpu_usage_percent",
+          "description": "CPU 使用率(简单计算方式) 100 - avg(rate(node_cpu_seconds_total)[{{interval}}])*100",
+          "template": "100 - (avg by(instance)(rate(node_cpu_seconds_total{{labels}}[{{interval}}])) * 100)"
+        },
+        {
+          "metric": "memory_usage_percent",
+          "description": "内存使用率 (MemTotal-MemFree)/MemTotal *100",
+          "template": "(node_memory_MemTotal_bytes{{labels}} - node_memory_MemFree_bytes{{labels}}) / node_memory_MemTotal_bytes{{labels}} * 100"
+        },
+        {
+          "metric": "disk_usage_root_percent",
+          "description": "磁盘使用率 (size-free)/size *100",
+          "template": "(node_filesystem_size_bytes{{labels}} - node_filesystem_free_bytes{{labels}}) / node_filesystem_size_bytes{{labels}} * 100"
         }
       ]
     }

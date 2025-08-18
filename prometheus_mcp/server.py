@@ -8,7 +8,7 @@ from analyzer import AnalyzeService
 from config import ConfigManager
 from models import AnalyzeRequest, QueryParams
 from prom_client import PrometheusRestClient
-from utils import parse_duration_to_seconds
+from utils import compute_adaptive_step
 from loguru import logger
 import time
 
@@ -17,14 +17,15 @@ app = FastMCP("prometheus-mcp")
 
 @app.tool()
 def list_supported_analyze_type() -> List[Dict[str, Any]]:
-    """列出服务支持的所有分析类型，如 mysql指标分析、redis指标分析 等"""
+    """任何时候都请你先调用本工具，列出服务支持的所有分析类型。如需做时间差/减法(如“最近30分钟”)，务必调用 subtract 计算开始时间，不要自行心算。"""
     cfg = ConfigManager.load()
     logger.info("调用 list_supported_analyze_type")
     return [
         {
             "name": ai.name,
             "description": ai.description or "",
-            "metrics": [qt.metric for qt in ai.queryTemplates],
+            # 不返回详细的查询语句，防止干扰大模型
+            # "metrics": [qt.metric for qt in ai.queryTemplates],
         }
         for ai in cfg.global_config.appInstances
     ]
@@ -52,59 +53,51 @@ def prom_query(query: Annotated[str, "PromQL 查询语句"],
 def prom_query_range(
     query: Annotated[str, "PromQL 查询语句"],
     start: Annotated[int, "范围查询起始时间戳 (unix)，单位:秒"],
-    end: Annotated[int, "范围查询结束时间戳 (unix)，单位:秒"],
-    step: Annotated[Optional[str], "查询步长(数据分辨率)，如 15s、30s、1m；省略则使用配置 defaultStep"] = None,
+    end: Annotated[int, "范围查询结束时��戳 (unix)，单位:秒"],
+    interval: Annotated[Optional[str], "范围向量窗口大小(用于模板 {{interval}})，省略则使用配置 defaultInterval"] = None,
     timeout: Annotated[Optional[str], "查询超时时间，格式如 15s、1m、2h；省略则使用配置 queryTimeout"] = None,
     limit: Annotated[Optional[int], "结果数据行限制；省略则使用配置 limit"] = None,
 ) -> Dict[str, Any]:
-    logger.info(f"调用 prom_query_range start={start} end={end} step={step}")
+    """执行 PromQL 范围查询（自适应步长）并返回查询结果。
+    步长根据 (end-start) 与配置 maxPoints 自动计算。"""
+    logger.info(f"调用 prom_query_range(start={start}, end={end}, interval={interval}) 自适应步长")
+    if end <= start:
+        return {"error": "end 必须大于 start"}
     cfg = ConfigManager.load()
     pcfg = cfg.global_config.prometheusConfig
+    eff_interval = interval or pcfg.defaultInterval or "5m"
+    step = compute_adaptive_step(start, end, max_points=pcfg.maxPoints, default_step=pcfg.defaultStep)
+    logger.debug(f"自适应步长 step={step} interval={eff_interval}")
     client = PrometheusRestClient(
         cfg.base_url,
         pcfg.username,
         pcfg.password,
         request_timeout=pcfg.queryTimeout,
     )
-    effective_step = step or (pcfg.defaultStep or "15s")
-    if pcfg.minStep and parse_duration_to_seconds(effective_step) < parse_duration_to_seconds(pcfg.minStep):
-        logger.debug(f"步长 {effective_step} 小于 minStep {pcfg.minStep}，已替换")
-        effective_step = pcfg.minStep
-    data = client.execute(QueryParams(query=query, start=start, end=end, step=effective_step, timeout=timeout, limit=limit))
+    # 直接执行原始查询，不对 query 模板进行 {{interval}} 替换，这里假定调用方已替换；若需替换可再封装。
+    data = client.execute(QueryParams(query=query, start=start, end=end, step=step, timeout=timeout, limit=limit))
+    data["step"] = step
+    data["interval"] = eff_interval
     return data
 
 
 @app.tool()
 def analyze(
     name: Annotated[str, "分析类型名称（使用 list_supported_analyze_type 工具获取的 name 字段）"],
-    labels: Annotated[Dict[str, str], "PromQL 标签过滤条件，如 {'instance':'10.0.0.1:9104'}；可传空字典 {} 表示不额外过滤"],
-    start: Annotated[Optional[int], "可选：范围查询起始时间戳(秒)。与 end/step 组合决定是否执行范围查询"] = None,
-    end: Annotated[Optional[int], "可选：范围查询结束时间戳(秒)。若仅提供 end 则默认 start=end-1800(最近30分钟)"] = None,
-    step: Annotated[Optional[str], "可选：步长，如 15s/30s/1m；缺省使用配置 defaultStep；若小于配置 minStep 则自动提升"] = None,
+    labels: Annotated[Dict[str, str], "PromQL 标签过滤条件，如 {'instance':'10.0.0.1:9104'}；可传空字典 {}"],
+    start: Annotated[int, "范围查询起始时间戳(秒)"],
+    end: Annotated[int, "范围查询结束时间戳(秒)"],
+    interval: Annotated[Optional[str], "范围向量窗口大小(用于替换模板 {{interval}})，省略则使用配置 defaultInterval"] = None,
 ) -> Dict[str, Any]:
-    logger.info(f"调用 analyze name={name} start={start} end={end} step={step}")
+    """执行预定义分析（强制范围查询，自适应步长）。"""
+    logger.info(f"调用 analyze name={name} start={start} end={end} interval={interval} (自适应步长)")
+    if end <= start:
+        return {"error": "end 必须大于 start"}
     cfg = ConfigManager.load()
     pcfg = cfg.global_config.prometheusConfig
-
-    any_range = start is not None or end is not None or step is not None
-    err: Optional[str] = None
-    eff_start, eff_end, eff_step = start, end, step
-
-    if any_range:
-        if eff_end is not None and eff_start is None:
-            eff_start = eff_end - 1800
-            logger.debug(f"推导 start={eff_start} (end-1800)")
-        if eff_start is not None and eff_end is None:
-            err = "仅提供 start 不能确定范围，请同时提供 end，或只提供 end 让系统推导 start"
-        if eff_step is None:
-            eff_step = pcfg.defaultStep or "1m"
-        if pcfg.minStep and eff_step and parse_duration_to_seconds(eff_step) < parse_duration_to_seconds(pcfg.minStep):
-            logger.debug(f"步长 {eff_step} 小于 minStep {pcfg.minStep}，已提升")
-            eff_step = pcfg.minStep
-    if err:
-        logger.warning(f"analyze 参数错误: {err}")
-        return {"error": err}
-
+    eff_interval = interval or pcfg.defaultInterval or "5m"
+    step = compute_adaptive_step(start, end, max_points=pcfg.maxPoints, default_step=pcfg.defaultStep)
+    logger.debug(f"analyze 自适应步长 step={step} interval={eff_interval}")
     client = PrometheusRestClient(
         cfg.base_url,
         pcfg.username,
@@ -112,11 +105,11 @@ def analyze(
         request_timeout=pcfg.queryTimeout,
     )
     srv = AnalyzeService(cfg, client)
-
-    if not (eff_start is not None and eff_end is not None and eff_step is not None):
-        eff_start = eff_end = eff_step = None
-    resp = srv.get_report(AnalyzeRequest(name=name, labels=labels or {}, start=eff_start, end=eff_end, step=eff_step))
-    return resp.model_dump()
+    resp = srv.get_report(AnalyzeRequest(name=name, labels=labels or {}, start=start, end=end, step=step, interval=eff_interval))
+    out = resp.model_dump()
+    out["step"] = step
+    out["interval"] = eff_interval
+    return out
 
 
 @app.tool()
@@ -125,6 +118,18 @@ def current_timestamp() -> Dict[str, int]:
     ts = int(time.time())
     logger.info(f"调用 current_timestamp now={ts}")
     return {"timestamp": ts}
+
+
+@app.tool()
+def subtract(
+    minuend: Annotated[int, "被减数，通常为结束时间戳(秒)或当前时间戳"],
+    subtrahend: Annotated[int, "减数，需减去的秒数（如 1800 表示30分钟）"],
+) -> Dict[str, int]:
+    """执行整数减法: result = minuend - subtrahend。
+    规则：凡是需要计算类似“最近X分钟/小时/秒”的起始时间，必须调用本工具而不是在提示中直接写出结果。"""
+    result = minuend - subtrahend
+    logger.info(f"调用 subtract {minuend}-{subtrahend}={result}")
+    return {"result": result}
 
 
 def main() -> None:

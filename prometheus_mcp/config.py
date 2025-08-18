@@ -27,7 +27,8 @@ class PrometheusConfig(BaseModel):
     password: Optional[str] = None
     queryTimeout: Optional[str] = None
     defaultStep: Optional[str] = None
-    minStep: Optional[str] = None  # 新增：允许的最小步长，若外部传入更小步长则使用该值
+    maxPoints: Optional[int] = None  # 范围查询允许的最大数据点，用于计算自适应步长
+    defaultInterval: Optional[str] = None  # 新增：范围向量默认窗口大小（用于 {{interval}} 占位符）
 
 
 class GlobalConfig(BaseModel):

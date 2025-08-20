@@ -1,8 +1,7 @@
 {
+  "serverPort": 7000,
   "prometheusConfig": {
     "baseUrl": "http://localhost:8428",
-    "username": "admin",
-    "password": "admin",
     "queryTimeout": "30s",
     "defaultStep": "1m",
     "maxPoints": 30,
@@ -161,12 +160,12 @@
         },
         {
           "metric": "connected_clients",
-          "description": "连接客户端数量",
+          "description": "连接客户���数量",
           "template": "redis_connected_clients{{labels}}"
         },
         {
           "metric": "blocked_clients",
-          "description": "阻塞客户端数量",
+          "description": "阻塞客���端数量",
           "template": "redis_blocked_clients{{labels}}"
         },
         {
@@ -243,7 +242,7 @@
     },
     {
       "name": "node_analyze",
-      "description": "通过 node_exporter 获取主机基础资源(仅保留已验证指标)",
+      "description": "通过 node_exporter 获取主机基础资源(���保留已验证指标)",
       "queryTemplates": [
         {
           "metric": "cpu_usage_percent",

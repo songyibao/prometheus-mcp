@@ -3,14 +3,14 @@ name = "prometheus-mcp"
 version = "0.1.0"
 description = "Prometheus analysis MCP server using fastmcp"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.11"
 authors = [{ name = "SongYibao" }]
 
 dependencies = [
   "fastmcp",
   "httpx",
   "loguru>=0.7.3",
-  "mysql-connector-python>=9.4.0",
+  "mcpo>=0.0.17",
   "pydantic",
 ]
 
@@ -21,4 +21,5 @@ prometheus-mcp = "prometheus_mcp.server:main"
 line-length = 100
 
 [[tool.uv.index]]
-url = "https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple"
+url = "http://mirrors.aliyun.com/pypi/simple/"
+#url = "https://mirrors.tuna.tsinghua.edu.cn/pypi/web/simple"

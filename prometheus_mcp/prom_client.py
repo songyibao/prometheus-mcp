@@ -10,13 +10,11 @@ from loguru import logger
 
 
 class PrometheusRestClient:
-    def __init__(self, base_url: str, username: Optional[str] = None, password: Optional[str] = None,
-                 request_timeout: Optional[str] = None):
+    def __init__(self, base_url: str, request_timeout: Optional[str] = None):
         self.base_url = base_url.rstrip("/")
-        self.auth = (username, password) if username and password else None
         timeout_seconds = parse_duration_to_seconds(request_timeout, 30.0)
-        logger.debug(f"初始化 PrometheusRestClient base_url={self.base_url} timeout={timeout_seconds}s auth={'yes' if self.auth else 'no'}")
-        self.client = httpx.Client(auth=self.auth, timeout=timeout_seconds)
+        logger.debug(f"初始化 PrometheusRestClient base_url={self.base_url} timeout={timeout_seconds}s (no auth)")
+        self.client = httpx.Client(timeout=timeout_seconds)
 
     def _extract_data(self, resp_json: Dict[str, Any]) -> Dict[str, Any]:
         if resp_json.get("status") != "success":

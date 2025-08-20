@@ -12,7 +12,11 @@ from utils import compute_adaptive_step
 from loguru import logger
 import time
 
-app = FastMCP("prometheus-mcp")
+# 加载配置以获取端口
+_cfg_for_port = ConfigManager.load()
+_port = _cfg_for_port.global_config.serverPort or 7000
+logger.info(f"初始化 FastMCP 服务端口: {_port}")
+app = FastMCP("prometheus-mcp", port=_port)
 
 
 @app.tool()
@@ -24,8 +28,6 @@ def list_supported_analyze_type() -> List[Dict[str, Any]]:
         {
             "name": ai.name,
             "description": ai.description or "",
-            # 不返回详细的查询语句，防止干扰大模型
-            # "metrics": [qt.metric for qt in ai.queryTemplates],
         }
         for ai in cfg.global_config.appInstances
     ]
@@ -41,8 +43,6 @@ def prom_query(query: Annotated[str, "PromQL 查询语句"],
     pcfg = cfg.global_config.prometheusConfig
     client = PrometheusRestClient(
         cfg.base_url,
-        pcfg.username,
-        pcfg.password,
         request_timeout=pcfg.queryTimeout,
     )
     data = client.execute(QueryParams(query=query, time=time, timeout=timeout, limit=limit))
@@ -53,7 +53,7 @@ def prom_query(query: Annotated[str, "PromQL 查询语句"],
 def prom_query_range(
     query: Annotated[str, "PromQL 查询语句"],
     start: Annotated[int, "范围查询起始时间戳 (unix)，单位:秒"],
-    end: Annotated[int, "范围查询结束时��戳 (unix)，单位:秒"],
+    end: Annotated[int, "范围查询结束时间戳 (unix)，单位:秒"],
     interval: Annotated[Optional[str], "范围向量窗口大小(用于模板 {{interval}})，省略则使用配置 defaultInterval"] = None,
     timeout: Annotated[Optional[str], "查询超时时间，格式如 15s、1m、2h；省略则使用配置 queryTimeout"] = None,
     limit: Annotated[Optional[int], "结果数据行限制；省略则使用配置 limit"] = None,
@@ -70,11 +70,8 @@ def prom_query_range(
     logger.debug(f"自适应步长 step={step} interval={eff_interval}")
     client = PrometheusRestClient(
         cfg.base_url,
-        pcfg.username,
-        pcfg.password,
         request_timeout=pcfg.queryTimeout,
     )
-    # 直接执行原始查询，不对 query 模板进行 {{interval}} 替换，这里假定调用方已替换；若需替换可再封装。
     data = client.execute(QueryParams(query=query, start=start, end=end, step=step, timeout=timeout, limit=limit))
     data["step"] = step
     data["interval"] = eff_interval
@@ -100,8 +97,6 @@ def analyze(
     logger.debug(f"analyze 自适应步长 step={step} interval={eff_interval}")
     client = PrometheusRestClient(
         cfg.base_url,
-        pcfg.username,
-        pcfg.password,
         request_timeout=pcfg.queryTimeout,
     )
     srv = AnalyzeService(cfg, client)

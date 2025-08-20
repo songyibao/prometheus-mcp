@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional
+from typing import List, Optional  # 移除未使用的 Any, Dict
 
 from pydantic import BaseModel, Field, ValidationError
 from loguru import logger
@@ -23,17 +23,16 @@ class AppInstance(BaseModel):
 
 class PrometheusConfig(BaseModel):
     baseUrl: str
-    username: Optional[str] = None
-    password: Optional[str] = None
     queryTimeout: Optional[str] = None
     defaultStep: Optional[str] = None
-    maxPoints: Optional[int] = None  # 范围查询允许的最大数据点，用于计算自适应步长
-    defaultInterval: Optional[str] = None  # 新增：范围向量默认窗口大小（用于 {{interval}} 占位符）
+    maxPoints: Optional[int] = None
+    defaultInterval: Optional[str] = None
 
 
 class GlobalConfig(BaseModel):
     appInstances: List[AppInstance] = Field(default_factory=list)
     prometheusConfig: PrometheusConfig
+    serverPort: Optional[int] = Field(default=7000, description="MCP 服务监听端口")
 
 
 @dataclass
@@ -55,5 +54,5 @@ class ConfigManager:
         except ValidationError as e:
             logger.error(f"配置文件校验失败: {e}")
             raise RuntimeError(f"Invalid config.json: {e}")
-        logger.info(f"配置加载成功: appInstances={len(gc.appInstances)} baseUrl={gc.prometheusConfig.baseUrl}")
+        logger.info(f"配置加载成功: appInstances={len(gc.appInstances)} baseUrl={gc.prometheusConfig.baseUrl} port={gc.serverPort}")
         return ConfigManager(global_config=gc)

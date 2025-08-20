@@ -21,7 +21,7 @@ Prometheus/VictoriaMetrics 指标巡检 / 分析 MCP 服务。读取 `config.jso
   "serverPort": 7000, // MCP 服务端口
   "prometheusConfig": {
     "baseUrl": "http://localhost:8428", // Prometheus 或 VictoriaMetrics 的 API 地址
-    ... // 其他配置项
+    //... 其他配置项
   }
 }
 ```
@@ -122,10 +122,10 @@ mcpo --port 8002 --server-type streamable-http -- http://127.0.0.1:7000/mcp
           "description": "MySQL 实例累计运行时长(秒)",
           "template": "mysql_global_status_uptime{{labels}}"
         },
-        ... // 更多指标查询语句模板,根据需要定义
+        //... 更多指标查询语句模板,根据需要定义
       ]
     },
-    ... // 更多分析类型如 redis_analyze和node_analyze,根据需要定义
+    //... 更多分析类型如 redis_analyze和node_analyze,根据需要定义
   ]
 }
 ```

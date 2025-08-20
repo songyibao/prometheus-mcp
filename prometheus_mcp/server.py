@@ -81,7 +81,7 @@ def prom_query_range(
 @app.tool()
 def analyze(
     name: Annotated[str, "分析类型名称（使用 list_supported_analyze_type 工具获取的 name 字段）"],
-    labels: Annotated[Dict[str, str], "PromQL 标签过滤条件，如 {'instance':'10.0.0.1:9104'}；可传空字典 {}"],
+    labels: Annotated[Dict[str, str], "PromQL 标签过滤条件，如 {'cluster_name':'aicall-tj'}或{'instance':'10.0.0.1:9104'}等；可传空字典 {}，代表不过滤"],
     start: Annotated[int, "范围查询起始时间戳(秒)"],
     end: Annotated[int, "范围查询结束时间戳(秒)"],
     interval: Annotated[Optional[str], "范围向量窗口大小(用于替换模板 {{interval}})，省略则使用配置 defaultInterval"] = None,

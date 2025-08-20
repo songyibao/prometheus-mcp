@@ -78,12 +78,6 @@ uv sync
 uv run prometheus_mcp/server.py
 ```
 
-### 启动后简单探测
-
-```bash
-curl -s http://127.0.0.1:7000/mcp | head
-```
-
 ### 暴露为 HTTP OpenAPI(用于对接不支持 MCP Client 的上层服务)
 
 ```bash

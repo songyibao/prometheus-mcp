@@ -30,7 +30,7 @@ Prometheus/VictoriaMetrics 指标巡检 / 分析 MCP 服务。读取 `config.jso
 
 ### 使用 `pip`
 
-准备好 Python 虚拟环境，需要 Python 3.11 或更高版本
+准备好 Python 虚拟环境并激活，需要 Python 3.11 或更高版本
 
 安装依赖
 
@@ -50,7 +50,7 @@ pip install -r requirements.txt -i https://mirrors.aliyun.com/pypi/simple/
 python prometheus_mcp/server.py
 ```
 
-### 使用 uv
+### 使用 uv (自动管理python版本和依赖包)
 
 安装 `uv`：
 

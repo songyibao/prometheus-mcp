@@ -29,9 +29,15 @@ class PrometheusConfig(BaseModel):
     defaultInterval: Optional[str] = None
 
 
+class LokiConfig(BaseModel):
+    baseUrl: str
+    queryTimeout: Optional[str] = None
+
+
 class GlobalConfig(BaseModel):
     appInstances: List[AppInstance] = Field(default_factory=list)
     prometheusConfig: PrometheusConfig
+    lokiConfig: Optional[LokiConfig] = None
     serverPort: Optional[int] = Field(default=7000, description="MCP 服务监听端口")
 
 
@@ -54,5 +60,8 @@ class ConfigManager:
         except ValidationError as e:
             logger.error(f"配置文件校验失败: {e}")
             raise RuntimeError(f"Invalid config.json: {e}")
-        logger.info(f"配置加载成功: appInstances={len(gc.appInstances)} baseUrl={gc.prometheusConfig.baseUrl} port={gc.serverPort}")
+        logger.info(
+            f"配置加载成功: appInstances={len(gc.appInstances)} promBase={gc.prometheusConfig.baseUrl} "
+            f"lokiBase={(gc.lokiConfig.baseUrl if gc.lokiConfig else 'N/A')} port={gc.serverPort}"
+        )
         return ConfigManager(global_config=gc)

@@ -4,3 +4,4 @@ httpx
 loguru>=0.7.3
 mcpo>=0.0.17
 pydantic
+mysql-connector-python>=8.0

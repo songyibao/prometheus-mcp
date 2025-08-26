@@ -11,6 +11,7 @@ dependencies = [
   "httpx",
   "loguru>=0.7.3",
   "mcpo>=0.0.17",
+  "mysql-connector-python>=9.4.0",
   "pydantic",
 ]
 

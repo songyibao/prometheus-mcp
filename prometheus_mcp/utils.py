@@ -3,6 +3,10 @@ from __future__ import annotations
 import math
 from typing import Optional
 
+# 新增
+import re
+import calendar
+
 
 def parse_duration_to_seconds(text: str | None, default: float = 30.0) -> float:
     if not text:
@@ -66,3 +70,41 @@ def compute_adaptive_step(start: int, end: int, *, max_points: Optional[int], de
         days = math.ceil(ideal / 86400)
         chosen = days * 86400
     return _seconds_to_prom_duration(chosen)
+
+
+# 新增：解析 RFC3339Nano 为纳秒
+_RFC3339_NANO_RE = re.compile(r"^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}):(\d{2}):(\d{2})(?:\.(\d{1,9}))?([Zz]|[+-]\d{2}:\d{2})$")
+
+
+def parse_rfc3339_nano_to_ns(text: str) -> int:
+    """将 RFC3339Nano 格式(如 2025-08-26T12:34:56.123456789Z) 解析为纳秒级 Unix 时间戳(int)。
+    支持 Z 或 ±HH:MM 偏移。若小数位不足9位，将右侧补0。"""
+    if not isinstance(text, str):
+        raise ValueError("时间必须为 RFC3339Nano 字符串")
+    m = _RFC3339_NANO_RE.match(text.strip())
+    if not m:
+        raise ValueError("时间格式不合法，需为 RFC3339Nano，例如 2025-08-26T12:34:56.123456789Z")
+    y, mo, d, h, mi, s, frac, tz = m.groups()
+    y = int(y); mo = int(mo); d = int(d); h = int(h); mi = int(mi); s = int(s)
+    frac_str = frac or ""
+    # 右补零至9位
+    if len(frac_str) < 9:
+        frac_str = frac_str + ("0" * (9 - len(frac_str)))
+    fraction_ns = int(frac_str or "0")
+
+    # 偏移量(秒)
+    if tz in ("Z", "z"):
+        offset_sec = 0
+    else:
+        sign = 1 if tz[0] == '+' else -1
+        th = int(tz[1:3])
+        tm = int(tz[4:6])
+        offset_sec = sign * (th * 3600 + tm * 60)
+
+    # 将本地(带偏移)时间转换为 UTC epoch 秒
+    # calendar.timegm 将传入元组按 UTC 解释
+    epoch_sec_as_if_utc = calendar.timegm((y, mo, d, h, mi, s, 0, 0, 0))
+    epoch_sec_utc = epoch_sec_as_if_utc - offset_sec
+
+    ns = epoch_sec_utc * 1_000_000_000 + fraction_ns
+    return ns

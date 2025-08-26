@@ -7,6 +7,10 @@
     "maxPoints": 30,
     "defaultInterval": "5m"
   },
+  "lokiConfig": {
+    "baseUrl": "http://localhost:3100",
+    "queryTimeout": "30s"
+  },
   "appInstances": [
     {
       "name": "mysql_analyze",

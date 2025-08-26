@@ -21,7 +21,7 @@ app = FastMCP("prometheus-mcp", port=_port)
 
 @app.tool()
 def list_supported_analyze_type() -> List[Dict[str, Any]]:
-    """任何时候都请你先调用本工具，列出服务支持的所有分析类型。如需做时间差/减法(如“最近30分钟”)，务必调用 subtract 计算开始时间，不要自行心算。"""
+    """任何时候都请你先调用本工具，列出服务支持的所有分析类型。"""
     cfg = ConfigManager.load()
     logger.info("调用 list_supported_analyze_type")
     return [
@@ -33,7 +33,7 @@ def list_supported_analyze_type() -> List[Dict[str, Any]]:
     ]
 
 
-@app.tool()
+# @app.tool()
 def prom_query(query: Annotated[str, "PromQL 查询语句"],
                time: Annotated[int, "查询的时间戳(unix timestamp)，单位:秒"] = None,
                timeout: Annotated[str, "查询超时时间，格式如 15s、1m、2h 等，默认为配置文件中的 queryTimeout"] = None,
@@ -49,7 +49,7 @@ def prom_query(query: Annotated[str, "PromQL 查询语句"],
     return data
 
 
-@app.tool()
+# @app.tool()
 def prom_query_range(
     query: Annotated[str, "PromQL 查询语句"],
     start: Annotated[int, "范围查询起始时间戳 (unix)，单位:秒"],
@@ -115,7 +115,7 @@ def current_timestamp() -> Dict[str, int]:
     return {"timestamp": ts}
 
 
-@app.tool()
+# @app.tool()
 def subtract(
     minuend: Annotated[int, "被减数，通常为结束时间戳(秒)或当前时间戳"],
     subtrahend: Annotated[int, "减数，需减去的秒数（如 1800 表示30分钟）"],

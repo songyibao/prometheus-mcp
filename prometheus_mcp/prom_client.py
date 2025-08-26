@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import httpx
 from typing import Any, Dict, Optional, List
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta,UTC
 
 from models import QueryParams
 from utils import parse_duration_to_seconds
@@ -29,12 +29,13 @@ class PrometheusRestClient:
         if limit is not None:
             params["limit"] = limit
 
-    def _to_beijing(self, ts: Any) -> str:
+    @staticmethod
+    def _to_beijing(ts: Any) -> str:
         try:
             t = float(ts)
         except Exception:
             return str(ts)
-        dt = datetime.utcfromtimestamp(t) + timedelta(hours=8)
+        dt = datetime.fromtimestamp(t,UTC) + timedelta(hours=8)
         return dt.strftime("%Y-%m-%d %H:%M:%S")
 
     def _convert_timestamps(self, result_type: str, result: List[Dict[str, Any]]) -> None:

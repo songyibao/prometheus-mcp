@@ -130,13 +130,17 @@ def subtract(
 @app.tool()
 
 def loki_query_range(
-    query: Annotated[str, "Loki LogQL 查询字符串。例如 {instance=\"mysql:3306\"}、{job=\"mysql_logs\"}；只写标签筛选与表达式，不要在这里放时间范围。"],
+    labels: Annotated[Dict[str, str], "用于定位目标实例的过滤标签，必须至少包含一个键值对，如 {\"instance\":\"mysql:3306\"} 或 {\"job\":\"mysql_logs\", \"service_name\":\"mysql_logs\"}"],
     start: Annotated[str, "起始时间，RFC3339Nano 字符串，必须包含时区(Z 或 ±HH:MM)。示例：2025-08-26T12:00:00.000000000Z(UTC) 或 2025-08-26T20:00:00.000000000+08:00(北京时间)。若表达北京时间，请使用 +08:00，不要误写成 Z。支持不足9位小数(会右补零至纳秒)。"],
     end: Annotated[str, "结束时间，RFC3339Nano 字符串，必须包含时区(Z 或 ±HH:MM)，且严格大于 start。示例：2025-08-26T12:30:00.000000000Z 或 2025-08-26T20:30:00.000000000+08:00；建议与 start 使用同一时区表达。"],
 ) -> Dict[str, Any]:
-    """Loki 日志范围查询。
+    """Loki 日志范围查询（内部构造 LogQL）。
 
-    要点：
+    使用方法：
+    - 仅传入 labels 对象来定位日志流，如 {"instance":"mysql:3306"}。
+    - 工具会自动构造 LogQL 选择器：{label1="v1",label2="v2"}，并在 [start,end] 时间窗内查询所有日志。
+
+    时间与时区要点：
     - start/end 必须是 RFC3339Nano 并包含时区(Z 或 ±HH:MM)。若是北京时间请用 +08:00；不要把北京时间误写成 Z，否则会偏移 8 小时。
     - 示例等价时间：
       * 2025-08-26T12:34:56.123456789Z
@@ -148,7 +152,9 @@ def loki_query_range(
     """
     from loki_client import LokiRestClient  # 绝对导入以兼容脚本运行
     from utils import parse_rfc3339_nano_to_ns
-    logger.info(f"调用 loki_query_range start={start} end={end}")
+    logger.info(f"调用 loki_query_range labels={labels} start={start} end={end}")
+    if not isinstance(labels, dict) or not labels:
+        return {"error": "labels 必须是非空对象，例如 {\"instance\":\"mysql:3306\"}"}
     try:
         start_ns = parse_rfc3339_nano_to_ns(start)
         end_ns = parse_rfc3339_nano_to_ns(end)
@@ -156,6 +162,27 @@ def loki_query_range(
         return {"error": f"时间格式错误: {e}"}
     if end_ns <= start_ns:
         return {"error": "end 必须大于 start"}
+
+    # 构造安全的 LogQL 选择器
+    def _escape_value(v: str) -> str:
+        if v is None:
+            return ""
+        s = str(v)
+        s = s.replace("\\", "\\\\").replace("\"", "\\\"")
+        return s
+
+    try:
+        parts = []
+        for k, v in labels.items():
+            if not k or v is None:
+                continue
+            parts.append(f'{k}="{_escape_value(v)}"')
+        if not parts:
+            return {"error": "labels 不能为空，且每个键必须有值"}
+        query = "{" + ",".join(parts) + "}"
+    except Exception as e:
+        return {"error": f"构造 LogQL 失败: {e}"}
+
     cfg = ConfigManager.load()
     lcfg = cfg.global_config.lokiConfig
     if not lcfg or not lcfg.baseUrl:

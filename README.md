@@ -322,7 +322,7 @@ mcpo --port 8002 --server-type streamable-http -- http://127.0.0.1:7000/mcp
 ### 1. MySQL监控模板
 
 
-```json
+```jsonc
 {
   "name": "mysql_analyze",
   "queryTemplates": [
@@ -353,7 +353,7 @@ mcpo --port 8002 --server-type streamable-http -- http://127.0.0.1:7000/mcp
 
 ### 2. Redis监控模板
 
-```json
+```jsonc
 {
   "name": "redis_analyze",
   "queryTemplates": [
@@ -379,7 +379,7 @@ mcpo --port 8002 --server-type streamable-http -- http://127.0.0.1:7000/mcp
 
 ### 3. Node监控模板
 
-```json
+```jsonc
 {
   "name": "node_analyze", 
   "queryTemplates": [

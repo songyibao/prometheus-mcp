@@ -21,7 +21,7 @@ app = FastMCP("prometheus-mcp", port=_port)
 
 @app.tool()
 def list_supported_analyze_type() -> List[Dict[str, Any]]:
-    """任何时候都请你先调用本工具，列出服务支持的所有分析类型。"""
+    """执行Prometheus查询分析前，请先调用本工具，列出服务支持的所有分析类型。"""
     cfg = ConfigManager.load()
     logger.info("调用 list_supported_analyze_type")
     return [
@@ -86,7 +86,7 @@ def analyze(
     end: Annotated[int, "范围查询结束时间戳(秒)"],
     interval: Annotated[Optional[str], "范围向量窗口大小(用于替换模板 {{interval}})，省略则使用配置 defaultInterval"] = None,
 ) -> Dict[str, Any]:
-    """执行预定义分析（强制范围查询，自适应步长）。"""
+    """Prometheus指标查询，根据分析类型和目标实例，执行预定义的PromQL查询预设，返回查询到的指标数据。"""
     logger.info(f"调用 analyze name={name} start={start} end={end} interval={interval} (自适应步长)")
     if end <= start:
         return {"error": "end 必须大于 start"}
@@ -134,7 +134,7 @@ def loki_query_range(
     start: Annotated[str, "起始时间，RFC3339Nano 字符串，必须包含时区(Z 或 ±HH:MM)。示例：2025-08-26T12:00:00.000000000Z(UTC) 或 2025-08-26T20:00:00.000000000+08:00(北京时间)。若表达北京时间，请使用 +08:00，不要误写成 Z。支持不足9位小数(会右补零至纳秒)。"],
     end: Annotated[str, "结束时间，RFC3339Nano 字符串，必须包含时区(Z 或 ±HH:MM)，且严格大于 start。示例：2025-08-26T12:30:00.000000000Z 或 2025-08-26T20:30:00.000000000+08:00；建议与 start 使用同一时区表达。"],
 ) -> Dict[str, Any]:
-    """Loki 日志范围查询（内部构造 LogQL）。
+    """Loki 日志查询，返回目标实例在指定时间窗口内的日志。
 
     使用方法：
     - 仅传入 labels 对象来定位日志流，如 {"instance":"mysql:3306"}。
